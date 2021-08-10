@@ -1,0 +1,126 @@
+unit unFuncoes;
+
+interface
+
+
+   function converter_utf8_ansi(const Source: string):string;
+   function SoNumero(fField : String): String;
+   function ValidarEMail(aStr: string): Boolean;
+   function ValidarCPF(CPF: string): boolean;
+
+implementation
+
+uses SysUtils;
+
+function converter_utf8_ansi(const Source: string): string;
+var
+   Iterator, SourceLength, FChar, NChar: Integer;
+begin
+   Result := '';
+   Iterator := 0;
+   SourceLength := Length(Source);
+   while Iterator < SourceLength do
+   begin
+      Inc(Iterator);
+      FChar := Ord(Source[Iterator]);
+      if FChar >= $80 then
+      begin
+         Inc(Iterator);
+         if Iterator > SourceLength then break;
+         FChar := FChar and $3F;
+         if (FChar and $20) <> 0 then
+         begin
+            FChar := FChar and $1F;
+            NChar := Ord(Source[Iterator]);
+            if (NChar and $C0) <> $80 then break;
+            FChar := (FChar shl 6) or (NChar and $3F);
+            Inc(Iterator);
+            if Iterator > SourceLength then break;
+         end;
+         NChar := Ord(Source[Iterator]);
+         if (NChar and $C0) <> $80 then break;
+         Result := Result + WideChar((FChar shl 6) or (NChar and $3F));
+      end
+      else
+         Result := Result + WideChar(FChar);
+   end;
+end;
+
+ function SoNumero(fField : String): String;
+var
+  I : Byte;
+begin
+   Result := '';
+   for I := 1 To Length(fField) do
+       if fField [I] In ['0'..'9'] Then
+            Result := Result + fField [I];
+end;
+
+function ValidarEMail(aStr: string): Boolean;
+begin
+ aStr := Trim(UpperCase(aStr));
+ if Pos('@', aStr) > 1 then
+ begin
+   Delete(aStr, 1, pos('@', aStr));
+   Result := (Length(aStr) > 0) and (Pos('.', aStr) > 2);
+ end
+ else
+   Result := False;
+end;
+
+function ValidarCPF(CPF: string): boolean;
+var  dig10, dig11: string;
+    s, i, r, peso: integer;
+begin
+// length - retorna o tamanho da string (CPF é um número formado por 11 dígitos)
+  if ((CPF = '00000000000') or (CPF = '11111111111') or
+      (CPF = '22222222222') or (CPF = '33333333333') or
+      (CPF = '44444444444') or (CPF = '55555555555') or
+      (CPF = '66666666666') or (CPF = '77777777777') or
+      (CPF = '88888888888') or (CPF = '99999999999') or
+      (length(CPF) <> 11))
+     then begin
+              ValidarCPF := false;
+              exit;
+            end;
+
+// try - protege o código para eventuais erros de conversão de tipo na função StrToInt
+  try
+{ *-- Cálculo do 1o. Digito Verificador --* }
+    s := 0;
+    peso := 10;
+    for i := 1 to 9 do
+    begin
+// StrToInt converte o i-ésimo caractere do CPF em um número
+      s := s + (StrToInt(CPF[i]) * peso);
+      peso := peso - 1;
+    end;
+    r := 11 - (s mod 11);
+    if ((r = 10) or (r = 11))
+       then dig10 := '0'
+    else str(r:1, dig10); // converte um número no respectivo caractere numérico
+
+{ *-- Cálculo do 2o. Digito Verificador --* }
+    s := 0;
+    peso := 11;
+    for i := 1 to 10 do
+    begin
+      s := s + (StrToInt(CPF[i]) * peso);
+      peso := peso - 1;
+    end;
+    r := 11 - (s mod 11);
+    if ((r = 10) or (r = 11))
+       then dig11 := '0'
+    else str(r:1, dig11);
+
+{ Verifica se os digitos calculados conferem com os digitos informados. }
+    if ((dig10 = CPF[10]) and (dig11 = CPF[11]))
+       then ValidarCPF := true
+    else ValidarCPF := false;
+  except
+    ValidarCPF := false
+  end;
+end;
+
+
+end.
